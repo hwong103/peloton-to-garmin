@@ -40,11 +40,10 @@ namespace Common.Observe
 			if (!ValidateExporterConfig(new Observability { Jaeger = config }))
 				return null;
 
-			TracerProvider tracing = null;
 			if (!config.Enabled)
-				return tracing;
+				return null;
 
-			var builder = Sdk.CreateTracerProviderBuilder()
+			var tracing = Sdk.CreateTracerProviderBuilder()
 				.ConfigureDefaultBuilder(config)
 				.Build();
 

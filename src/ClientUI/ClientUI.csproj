@@ -66,6 +66,8 @@
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0">
           <NoWarn>NU1603,NETSDK1023</NoWarn>
         </PackageReference>
+        <PackageReference Include="Microsoft.Extensions.Configuration" Version="10.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.0" />
     </ItemGroup>
 
 	<ItemGroup>

@@ -80,6 +80,21 @@ namespace UnitTests.Common
 		}
 
 		[Test]
+		public void EnableConsoleTracing_ValidConfig_ReturnsProvider()
+		{
+			var config = new Jaeger
+			{
+				Enabled = true,
+				AgentHost = "localhost",
+				AgentPort = 4317
+			};
+
+			using var tracing = Tracing.EnableConsoleTracing(config);
+
+			tracing.Should().NotBeNull();
+		}
+
+		[Test]
 		public void HttpRequestMessageEnricher_DoesNotCaptureQueryOrBody()
 		{
 			var activity = new Activity("test");

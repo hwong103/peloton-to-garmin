@@ -85,6 +85,9 @@ P2G looks for a file named `configuration.local.json` in the same directory wher
 
 The `Jaeger` configuration section retains its existing name for compatibility, but it now configures OTLP export. Use the collector's OTLP gRPC port, normally `4317`. The old Jaeger UDP agent port `6831` is rejected at startup with migration guidance.
 
+!!! note
+    P2G currently targets .NET 7. The patched OpenTelemetry 1.20 packages use their .NET Standard assemblies on that target and may emit Microsoft.Extensions support warnings during compilation. The project still requires a separate .NET runtime upgrade to remove those platform-support warnings.
+
 ### Serilog Config
 
 ```json
