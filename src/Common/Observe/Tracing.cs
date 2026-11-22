@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry;
+using OpenTelemetry.Exporter;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using Serilog;
@@ -44,7 +45,7 @@ namespace Common.Observe
 				.ConfigureDefaultBuilder(config)
 				.Build();
 
-			Log.Information("Tracing started and exporting to: http://{@Host}:{@Port}", config.AgentHost, config.AgentPort);
+			Log.Information("Tracing started and exporting via OTLP to: http://{@Host}:{@Port}", config.AgentHost, config.AgentPort);
 
 			return tracing;
 		}
@@ -63,11 +64,11 @@ namespace Common.Observe
 					.AddAspNetCoreInstrumentation(c =>
 					{
 						c.RecordException = true;
-						c.Enrich = AspNetCoreEnricher;
+						c.EnrichWithHttpRequest = AspNetCoreRequestEnricher;
 					});
 				});
 
-			Log.Information("Tracing started and exporting to: http://{@Host}:{@Port}", config.AgentHost, config.AgentPort);
+			Log.Information("Tracing started and exporting via OTLP to: http://{@Host}:{@Port}", config.AgentHost, config.AgentPort);
 
 		}
 
@@ -84,7 +85,7 @@ namespace Common.Observe
 					builder.ConfigureDefaultBuilder(config);
 				});
 
-			Log.Information("Tracing started and exporting to: http://{@Host}:{@Port}", config.AgentHost, config.AgentPort);
+			Log.Information("Tracing started and exporting via OTLP to: http://{@Host}:{@Port}", config.AgentHost, config.AgentPort);
 		}
 
 		private static TracerProviderBuilder ConfigureDefaultBuilder(this TracerProviderBuilder builder, Jaeger config)
@@ -107,13 +108,14 @@ namespace Common.Observe
 					.AddHttpClientInstrumentation(h =>
 					{
 						h.RecordException = true;
-						h.Enrich = HttpEnricher;
+						h.EnrichWithHttpRequestMessage = HttpRequestMessageEnricher;
+						h.EnrichWithHttpResponseMessage = HttpResponseMessageEnricher;
+						h.EnrichWithException = HttpExceptionEnricher;
 					})
-					.AddJaegerExporter(o =>
+					.AddOtlpExporter(o =>
 					{
-						o.AgentHost = config.AgentHost;
-						o.AgentPort = config.AgentPort.GetValueOrDefault();
-						o.Protocol = OpenTelemetry.Exporter.JaegerExportProtocol.UdpCompactThrift;
+						o.Endpoint = new Uri($"http://{config.AgentHost}:{config.AgentPort.GetValueOrDefault()}");
+						o.Protocol = OtlpExportProtocol.Grpc;
 					});
 		}
 
@@ -181,49 +183,35 @@ namespace Common.Observe
 			}
 		}
 
-		public static void HttpEnricher(Activity activity, string name, object rawEventObject)
+		public static void HttpRequestMessageEnricher(Activity activity, HttpRequestMessage request)
 		{
-			if (name.Equals("OnStartActivity"))
-			{
-				if (rawEventObject is HttpRequestMessage request)
-				{
-					activity.DisplayName = $"{request.Method} {request.RequestUri.AbsolutePath}";
-					activity.SetTag("http.request.path", request.RequestUri.AbsolutePath);
-					activity.SetTag("http.request.query", request.RequestUri.Query);
-					activity.SetTag("http.request.body", request.Content?.ReadAsStringAsync().GetAwaiter().GetResult() ?? "no_content");
-				}
-			}
-			else if (name.Equals("OnStopActivity"))
-			{
-				if (rawEventObject is HttpResponseMessage response)
-				{
-					var content = response.Content?.ReadAsStringAsync().GetAwaiter().GetResult() ?? "no_content";
-					activity.SetTag("http.response.body", content);
-				}
-			}
-			else if (name.Equals("OnException"))
-			{
-				if (rawEventObject is Exception exception)
-				{
-					activity.SetTag("stackTrace", exception.StackTrace);
-				}
-			}
+			activity.DisplayName = $"{request.Method} {request.RequestUri.AbsolutePath}";
+			activity.SetTag("http.request.path", request.RequestUri.AbsolutePath);
+			activity.SetTag("http.request.query", request.RequestUri.Query);
+			activity.SetTag("http.request.body", request.Content?.ReadAsStringAsync().GetAwaiter().GetResult() ?? "no_content");
 		}
 
-		public static void AspNetCoreEnricher(Activity activity, string name, object rawEventObject)
+		public static void HttpResponseMessageEnricher(Activity activity, HttpResponseMessage response)
 		{
-			if (name.Equals("OnStartActivity")
-				&& rawEventObject is HttpRequest httpRequest)
-			{
-				if (httpRequest.Headers.TryGetValue("TraceId", out var incomingTraceParent))
-					activity.SetParentId(incomingTraceParent);
+			var content = response.Content?.ReadAsStringAsync().GetAwaiter().GetResult() ?? "no_content";
+			activity.SetTag("http.response.body", content);
+		}
 
-				if (httpRequest.Headers.TryGetValue("uber-trace-id", out incomingTraceParent))
-					activity.SetParentId(incomingTraceParent);
+		public static void HttpExceptionEnricher(Activity activity, Exception exception)
+		{
+			activity.SetTag("stackTrace", exception.StackTrace);
+		}
 
-				activity.SetTag("http.path", httpRequest.Path);
-				activity.SetTag("http.query", httpRequest.QueryString);
-			}
+		public static void AspNetCoreRequestEnricher(Activity activity, HttpRequest httpRequest)
+		{
+			if (httpRequest.Headers.TryGetValue("TraceId", out var incomingTraceParent))
+				activity.SetParentId(incomingTraceParent);
+
+			if (httpRequest.Headers.TryGetValue("uber-trace-id", out incomingTraceParent))
+				activity.SetParentId(incomingTraceParent);
+
+			activity.SetTag("http.path", httpRequest.Path);
+			activity.SetTag("http.query", httpRequest.QueryString);
 		}
 	}
 }

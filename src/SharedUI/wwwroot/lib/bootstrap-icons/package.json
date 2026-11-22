@@ -56,7 +56,7 @@
     "stylelint-config-twbs-bootstrap": "^4.0.0",
     "svg-sprite": "^2.0.0-beta7",
     "svgo": "^2.8.0",
-    "vnu-jar": "21.10.12"
+    "vnu-jar": "26.11.20"
   },
   "files": [
     "icons/*.svg",
