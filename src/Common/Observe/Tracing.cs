@@ -37,7 +37,8 @@ namespace Common.Observe
 
 		public static TracerProvider EnableConsoleTracing(Jaeger config)
 		{
-			ValidateExporterConfig(new Observability { Jaeger = config });
+			if (!ValidateExporterConfig(new Observability { Jaeger = config }))
+				return null;
 
 			TracerProvider tracing = null;
 			if (!config.Enabled)
@@ -54,7 +55,8 @@ namespace Common.Observe
 
 		public static void EnableApiTracing(IServiceCollection services, Jaeger config)
 		{
-			ValidateExporterConfig(new Observability { Jaeger = config });
+			if (!ValidateExporterConfig(new Observability { Jaeger = config }))
+				return;
 
 			if (!config.Enabled)
 				return;
@@ -78,7 +80,8 @@ namespace Common.Observe
 
 		public static void EnableWebUITracing(IServiceCollection services, Jaeger config)
 		{
-			ValidateExporterConfig(new Observability { Jaeger = config });
+			if (!ValidateExporterConfig(new Observability { Jaeger = config }))
+				return;
 
 			if (!config.Enabled)
 				return;
@@ -175,27 +178,30 @@ namespace Common.Observe
 			ValidateExporterConfig(config, throwOnInvalid: true);
 		}
 
-		public static void ValidateExporterConfig(Observability config, bool throwOnInvalid = false)
+		public static bool ValidateExporterConfig(Observability config, bool throwOnInvalid = false)
 		{
 			if (!config.Jaeger.Enabled)
-				return;
+				return true;
 
 			if (string.IsNullOrEmpty(config.Jaeger.AgentHost))
 			{
 				FailValidation("Agent Host must be set.", nameof(config.Jaeger.AgentHost), throwOnInvalid);
-				return;
+				return false;
 			}
 
 			if (config.Jaeger.AgentPort is null || config.Jaeger.AgentPort <= 0 || config.Jaeger.AgentPort > 65535)
 			{
 				FailValidation("Agent Port must be a valid port.", nameof(config.Jaeger.AgentPort), throwOnInvalid);
-				return;
+				return false;
 			}
 
 			if (config.Jaeger.AgentPort == 6831)
 			{
 				FailValidation("Jaeger UDP port 6831 is not supported. Configure AgentPort 4317 for OTLP gRPC.", nameof(config.Jaeger.AgentPort), throwOnInvalid);
+				return false;
 			}
+
+			return true;
 		}
 
 		private static void FailValidation(string message, string parameterName, bool throwOnInvalid)

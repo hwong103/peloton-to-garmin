@@ -69,6 +69,17 @@ namespace UnitTests.Common
 		}
 
 		[Test]
+		public void ValidateExporterConfig_InvalidConfig_ReturnsFalse()
+		{
+			var config = new Observability();
+			config.Jaeger.Enabled = true;
+			config.Jaeger.AgentPort = 6831;
+			config.Jaeger.AgentHost = "host";
+
+			Tracing.ValidateExporterConfig(config).Should().BeFalse();
+		}
+
+		[Test]
 		public void HttpRequestMessageEnricher_DoesNotCaptureQueryOrBody()
 		{
 			var activity = new Activity("test");
