@@ -176,10 +176,16 @@ namespace Common.Observe
 				throw new ArgumentException("Agent Host must be set.", nameof(config.Jaeger.AgentHost));
 			}
 
-			if (config.Jaeger.AgentPort is null || config.Jaeger.AgentPort <= 0)
+			if (config.Jaeger.AgentPort is null || config.Jaeger.AgentPort <= 0 || config.Jaeger.AgentPort > 65535)
 			{
 				Log.Error("Agent Port must be set: {@ConfigSection}.{@ConfigProperty}.", nameof(config), nameof(config.Jaeger.AgentPort));
 				throw new ArgumentException("Agent Port must be a valid port.", nameof(config.Jaeger.AgentPort));
+			}
+
+			if (config.Jaeger.AgentPort == 6831)
+			{
+				Log.Error("Jaeger UDP port 6831 is not supported by the OTLP exporter. Configure the OTLP gRPC port, normally 4317.");
+				throw new ArgumentException("Jaeger UDP port 6831 is not supported. Configure AgentPort 4317 for OTLP gRPC.", nameof(config.Jaeger.AgentPort));
 			}
 		}
 

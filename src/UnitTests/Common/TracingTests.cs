@@ -9,7 +9,7 @@ namespace UnitTests.Common
     public class TracingTests
 	{
 		[Test]
-		public void ValidateConfig_InvalidPort_Throws([Values(-1, 0)] int port)
+		public void ValidateConfig_InvalidPort_Throws([Values(-1, 0, 65536)] int port)
 		{
 			var config = new Observability();
 			config.Jaeger.Enabled = true;
@@ -25,10 +25,23 @@ namespace UnitTests.Common
 		{
 			var config = new Observability();
 			config.Jaeger.Enabled = true;
-			config.Jaeger.AgentPort = 8000;
+			config.Jaeger.AgentPort = 4317;
 			config.Jaeger.AgentHost = "host";
 
 			Tracing.ValidateConfig(config);
+		}
+
+		[Test]
+		public void ValidateConfig_LegacyJaegerUdpPort_Throws()
+		{
+			var config = new Observability();
+			config.Jaeger.Enabled = true;
+			config.Jaeger.AgentPort = 6831;
+			config.Jaeger.AgentHost = "host";
+
+			Action action = () => Tracing.ValidateConfig(config);
+			action.Should().Throw<ArgumentException>()
+				.WithMessage("*4317*");
 		}
 
 		[Test]

@@ -11,7 +11,7 @@ P2G supports publishing Open Telemetry metrics. P2G publishes the following:
 
 1. Logs via Serilog. Logs can be sunk to a variety of sources including Console, File, ElasticSearch, and Grafana Loki.
 1. Metrics via Prometheus. Metrics are exposed on a standard `/metrics` endpoint and the port is configurable.
-1. Traces via Jaeger. Traces can be collected via an agent of your choice. Some options include Jaeger Agent/Jaeger Query, or Grafana Tempo.
+1. Traces via the OpenTelemetry Protocol (OTLP). Traces can be collected by any OTLP-compatible receiver, including Jaeger, Grafana Tempo, or the OpenTelemetry Collector.
 1. P2G also provides a sample Grafana dashboard which can be found [in the repository](https://github.com/philosowaffle/peloton-to-garmin/tree/master/grafana).
 
 The grafana dashboard assumes you have the following datasources setup but can be easily modified to meet your needs:
@@ -36,7 +36,7 @@ P2G looks for a file named `configuration.local.json` in the same directory wher
 ```
 
 1. Jump to [Prometheus Config Documentation](#prometheus-config)
-2. Jump to [Jaeger Config Documentation](#jaeger-config)
+2. Jump to [OTLP Trace Export Documentation](#otlp-trace-export)
 3. Jump to [Serilog Config Documentation](#serilog-config)
 
 ### Prometheus Config
@@ -67,21 +67,23 @@ P2G looks for a file named `configuration.local.json` in the same directory wher
       insecure_skip_verify: true
 ```
 
-### Jaeger Config
+### OTLP Trace Export
 
 ```json
 "Jaeger": {
       "Enabled": false,
       "AgentHost": "localhost",
-      "AgentPort": 6831
+      "AgentPort": 4317
     }
 ```
 
 | Field      | Required | Default | Description |
 |:-----------|:---------|:--------|:------------|
 | Enabled | no | `false` | Whether or not to generate traces. |
-| AgentHost | **yes - if Enalbed=true** | `null` | The host address for your trace collector. |
-| AgentPort | **yes - if Enabled=true** | `null` | The port for your trace collector. |
+| AgentHost | **yes - if Enabled=true** | `null` | The host address for your OTLP collector. |
+| AgentPort | **yes - if Enabled=true** | `null` | The OTLP gRPC port for your trace collector. |
+
+The `Jaeger` configuration section retains its existing name for compatibility, but it now configures OTLP export. Use the collector's OTLP gRPC port, normally `4317`. The old Jaeger UDP agent port `6831` is rejected at startup with migration guidance.
 
 ### Serilog Config
 

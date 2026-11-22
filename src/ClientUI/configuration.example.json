@@ -9,7 +9,7 @@
       "Jaeger": {
         "Enabled": false,
         "AgentHost": "localhost",
-        "AgentPort": 6831
+        "AgentPort": 4317
       },
   
       "Serilog": {
