@@ -23,6 +23,9 @@ jobs:
       with:
         dotnet-version: ${{ matrix.dotnet }}
 
+    - name: Install MAUI Windows workload
+      run: dotnet workload install maui-windows
+
     - name: Clean
       run: dotnet clean --configuration Debug && dotnet nuget locals all --clear
     

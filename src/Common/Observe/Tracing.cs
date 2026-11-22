@@ -37,6 +37,8 @@ namespace Common.Observe
 
 		public static TracerProvider EnableConsoleTracing(Jaeger config)
 		{
+			ValidateExporterConfig(new Observability { Jaeger = config });
+
 			TracerProvider tracing = null;
 			if (!config.Enabled)
 				return tracing;
@@ -52,6 +54,8 @@ namespace Common.Observe
 
 		public static void EnableApiTracing(IServiceCollection services, Jaeger config)
 		{
+			ValidateExporterConfig(new Observability { Jaeger = config });
+
 			if (!config.Enabled)
 				return;
 
@@ -74,6 +78,8 @@ namespace Common.Observe
 
 		public static void EnableWebUITracing(IServiceCollection services, Jaeger config)
 		{
+			ValidateExporterConfig(new Observability { Jaeger = config });
+
 			if (!config.Enabled)
 				return;
 
@@ -109,7 +115,6 @@ namespace Common.Observe
 					{
 						h.RecordException = true;
 						h.EnrichWithHttpRequestMessage = HttpRequestMessageEnricher;
-						h.EnrichWithHttpResponseMessage = HttpResponseMessageEnricher;
 						h.EnrichWithException = HttpExceptionEnricher;
 					})
 					.AddOtlpExporter(o =>
@@ -167,40 +172,43 @@ namespace Common.Observe
 
 		public static void ValidateConfig(Observability config)
 		{
+			ValidateExporterConfig(config, throwOnInvalid: true);
+		}
+
+		public static void ValidateExporterConfig(Observability config, bool throwOnInvalid = false)
+		{
 			if (!config.Jaeger.Enabled)
 				return;
 
 			if (string.IsNullOrEmpty(config.Jaeger.AgentHost))
 			{
-				Log.Error("Agent Host must be set: {@ConfigSection}.{@ConfigProperty}.", nameof(config), nameof(config.Jaeger.AgentHost));
-				throw new ArgumentException("Agent Host must be set.", nameof(config.Jaeger.AgentHost));
+				FailValidation("Agent Host must be set.", nameof(config.Jaeger.AgentHost), throwOnInvalid);
+				return;
 			}
 
 			if (config.Jaeger.AgentPort is null || config.Jaeger.AgentPort <= 0 || config.Jaeger.AgentPort > 65535)
 			{
-				Log.Error("Agent Port must be set: {@ConfigSection}.{@ConfigProperty}.", nameof(config), nameof(config.Jaeger.AgentPort));
-				throw new ArgumentException("Agent Port must be a valid port.", nameof(config.Jaeger.AgentPort));
+				FailValidation("Agent Port must be a valid port.", nameof(config.Jaeger.AgentPort), throwOnInvalid);
+				return;
 			}
 
 			if (config.Jaeger.AgentPort == 6831)
 			{
-				Log.Error("Jaeger UDP port 6831 is not supported by the OTLP exporter. Configure the OTLP gRPC port, normally 4317.");
-				throw new ArgumentException("Jaeger UDP port 6831 is not supported. Configure AgentPort 4317 for OTLP gRPC.", nameof(config.Jaeger.AgentPort));
+				FailValidation("Jaeger UDP port 6831 is not supported. Configure AgentPort 4317 for OTLP gRPC.", nameof(config.Jaeger.AgentPort), throwOnInvalid);
 			}
+		}
+
+		private static void FailValidation(string message, string parameterName, bool throwOnInvalid)
+		{
+			Log.Error("{Message}", message);
+			if (throwOnInvalid)
+				throw new ArgumentException(message, parameterName);
 		}
 
 		public static void HttpRequestMessageEnricher(Activity activity, HttpRequestMessage request)
 		{
 			activity.DisplayName = $"{request.Method} {request.RequestUri.AbsolutePath}";
 			activity.SetTag("http.request.path", request.RequestUri.AbsolutePath);
-			activity.SetTag("http.request.query", request.RequestUri.Query);
-			activity.SetTag("http.request.body", request.Content?.ReadAsStringAsync().GetAwaiter().GetResult() ?? "no_content");
-		}
-
-		public static void HttpResponseMessageEnricher(Activity activity, HttpResponseMessage response)
-		{
-			var content = response.Content?.ReadAsStringAsync().GetAwaiter().GetResult() ?? "no_content";
-			activity.SetTag("http.response.body", content);
 		}
 
 		public static void HttpExceptionEnricher(Activity activity, Exception exception)
@@ -216,8 +224,7 @@ namespace Common.Observe
 			if (httpRequest.Headers.TryGetValue("uber-trace-id", out incomingTraceParent))
 				activity.SetParentId(incomingTraceParent);
 
-			activity.SetTag("http.path", httpRequest.Path);
-			activity.SetTag("http.query", httpRequest.QueryString);
+			activity.SetTag("http.path", httpRequest.Path.ToString());
 		}
 	}
 }
