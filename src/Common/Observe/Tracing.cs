@@ -121,9 +121,14 @@ namespace Common.Observe
 					})
 					.AddOtlpExporter(o =>
 					{
-						o.Endpoint = new Uri($"http://{config.AgentHost}:{config.AgentPort.GetValueOrDefault()}");
+						o.Endpoint = GetOtlpEndpoint(config);
 						o.Protocol = OtlpExportProtocol.Grpc;
 					});
+		}
+
+		public static Uri GetOtlpEndpoint(Jaeger config)
+		{
+			return new UriBuilder(Uri.UriSchemeHttp, config.AgentHost, config.AgentPort.GetValueOrDefault()).Uri;
 		}
 
 		public static Activity Trace(string name, string category = "app", ActivityKind kind = ActivityKind.Server)
@@ -182,9 +187,10 @@ namespace Common.Observe
 			if (!config.Jaeger.Enabled)
 				return true;
 
-			if (string.IsNullOrEmpty(config.Jaeger.AgentHost))
+			if (string.IsNullOrWhiteSpace(config.Jaeger.AgentHost)
+				|| Uri.CheckHostName(config.Jaeger.AgentHost) == UriHostNameType.Unknown)
 			{
-				FailValidation("Agent Host must be set.", nameof(config.Jaeger.AgentHost), throwOnInvalid);
+				FailValidation("Agent Host must be a valid DNS name or IP address.", nameof(config.Jaeger.AgentHost), throwOnInvalid);
 				return false;
 			}
 

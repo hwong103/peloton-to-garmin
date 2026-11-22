@@ -48,7 +48,7 @@ namespace UnitTests.Common
 		}
 
 		[Test]
-		public void ValidateConfig_InvalidHost_Throws([Values(null, "")] string agentHost)
+		public void ValidateConfig_InvalidHost_Throws([Values(null, "", " ", "https://collector", "collector:4317")] string agentHost)
 		{
 			var config = new Observability();
 			config.Jaeger.Enabled = true;
@@ -57,6 +57,18 @@ namespace UnitTests.Common
 
 			Action action = () => Tracing.ValidateConfig(config);
 			action.Should().Throw<ArgumentException>();
+		}
+
+		[Test]
+		public void GetOtlpEndpoint_BareIpv6_BracketsAddress()
+		{
+			var config = new Jaeger
+			{
+				AgentHost = "::1",
+				AgentPort = 4317
+			};
+
+			Tracing.GetOtlpEndpoint(config).Should().Be(new Uri("http://[::1]:4317/"));
 		}
 
 		[Test]
