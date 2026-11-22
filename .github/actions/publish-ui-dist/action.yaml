@@ -26,6 +26,10 @@ runs:
       run: dotnet workload list
       shell: pwsh
 
+    - name: Install MAUI Windows workload
+      run: dotnet workload install maui-windows
+      shell: pwsh
+
     - name: Prepare env
       run: |
           echo "BUILD_VERSION=$Env:GITHUB_RUN_NUMBER-$Env:GITHUB_RUN_ID" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf-8 -Append
@@ -46,7 +50,7 @@ runs:
 
     # Create Build Artifact
     - name: Upload Artifact ui_${{ inputs.os }}_${{ env.BUILD_VERSION }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: ui_${{ inputs.os }}_${{ env.BUILD_VERSION }}
         path: ${{ github.workspace }}/src/ClientUI/bin/Release/${{ inputs.framework }}/${{ inputs.os }}

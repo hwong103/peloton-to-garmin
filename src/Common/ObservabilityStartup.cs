@@ -25,8 +25,8 @@ public static class ObservabilityStartup
 	public static void ConfigureApi(IServiceCollection services, ConfigurationManager configManager, AppConfiguration config)
 	{
 		FlurlConfiguration.Configure(config.Observability);
-		Tracing.EnableApiTracing(services, config.Observability.Jaeger);
 		ConfigureLogging(configManager);
+		Tracing.EnableApiTracing(services, config.Observability.Jaeger);
 
 		// Setup initial Tracing Source
 		Tracing.Source = new(Statics.TracingService);
@@ -35,8 +35,8 @@ public static class ObservabilityStartup
 	public static void ConfigureWebUI(IServiceCollection services, ConfigurationManager configManager, AppConfiguration config)
 	{
 		FlurlConfiguration.Configure(config.Observability);
-		Tracing.EnableWebUITracing(services, config.Observability.Jaeger);
 		ConfigureLogging(configManager);
+		Tracing.EnableWebUITracing(services, config.Observability.Jaeger);
 
 		// Setup initial Tracing Source
 		Tracing.Source = new(Statics.TracingService);
